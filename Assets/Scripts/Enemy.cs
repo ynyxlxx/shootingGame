@@ -26,6 +26,8 @@ public class Enemy : LivingEntity {
     float damage = 1;
     bool hasTarget;
 
+    public static event System.Action OnDeathStatic;
+
     private void Awake() {
         pathFinder = GetComponent<NavMeshAgent>();
 
@@ -128,6 +130,9 @@ public class Enemy : LivingEntity {
 
         AudioManager.instance.PlaySound("Impact", transform.position);
         if (damage >= health) {
+            if (OnDeathStatic != null) {
+                OnDeathStatic();
+            }
             AudioManager.instance.PlaySound("Enemy Death", transform.position);
             Destroy(Instantiate(deathEffect.gameObject, hitPoint, Quaternion.FromToRotation(Vector3.forward, hitDirection)) as GameObject, deathEffect.main.startLifetime.constant);
         }
@@ -142,7 +147,8 @@ public class Enemy : LivingEntity {
         }
         startingHealth = enemyHealth;
 
-        skinMaterial = GetComponent<Renderer>().sharedMaterial;
+        deathEffect.startColor = new Color(skinColor.r, skinColor.g, skinColor.b, 1);
+        skinMaterial = GetComponent<Renderer>().material;
         skinMaterial.color = skinColor;
         originalColor = skinMaterial.color;
 

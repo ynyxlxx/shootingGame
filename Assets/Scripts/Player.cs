@@ -61,6 +61,11 @@ public class Player : LivingEntity {
         if (Input.GetKeyDown(KeyCode.R)) {
             gunController.Reload();
         }
+
+        //坠落后死亡
+        if (transform.position.y < -10) {
+            TakeDamage(health);
+        }
     }
 
     void OnNewWave(int waveNumber) {

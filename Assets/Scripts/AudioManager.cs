@@ -6,17 +6,16 @@ public class AudioManager : MonoBehaviour {
 
     public enum AudioChannel { Master, Sfx, Music };
 
-    float masterVolumePercent = 1f;
-    float sfxVolumPercent = 1;
-    float musicVolumePercent = 1;
+    public float masterVolumePercent { get; private set; }
+    public float sfxVolumPercent { get; private set; }
+    public float musicVolumePercent { get; private set; }
 
     AudioSource[] musicSources;
     AudioSource sfx2DSource;
     int activeMusicSourceIndex;
 
-    public static AudioManager instance;
-    bool isInstantiated = false;
-
+    private static AudioManager _instance;
+    public static AudioManager instance {get {return _instance;} }
 
     Transform audioListener;
     Transform playerTransform;
@@ -25,11 +24,10 @@ public class AudioManager : MonoBehaviour {
 
     void Awake() {
         //保证只有一个AudioManager的实例
-        if (instance != null && isInstantiated) {
-            Destroy(gameObject);
+        if (_instance != null && _instance != this) {
+            Destroy(this.gameObject);         
         } else {
-            isInstantiated = true;
-            instance = this;
+            _instance = this;
             DontDestroyOnLoad(gameObject);
 
             musicSources = new AudioSource[2];
@@ -44,12 +42,14 @@ public class AudioManager : MonoBehaviour {
             newSfx2Dsource.transform.parent = transform;
 
             audioListener = FindObjectOfType<AudioListener>().transform;
-            playerTransform = FindObjectOfType<Player>().transform;
+            if (FindObjectOfType<Player>() != null) {
+                playerTransform = FindObjectOfType<Player>().transform;
+            }
             library = GetComponent<SoundLibrary>();
 
-            masterVolumePercent = PlayerPrefs.GetFloat("master vol", masterVolumePercent);
-            sfxVolumPercent = PlayerPrefs.GetFloat("sfx vol", sfxVolumPercent);
-            musicVolumePercent = PlayerPrefs.GetFloat("music vol", musicVolumePercent);
+            masterVolumePercent = PlayerPrefs.GetFloat("master vol", 1);
+            sfxVolumPercent = PlayerPrefs.GetFloat("sfx vol", 1f);
+            musicVolumePercent = PlayerPrefs.GetFloat("music vol", 0.5f);
         }
     }
 
@@ -80,12 +80,14 @@ public class AudioManager : MonoBehaviour {
         PlayerPrefs.SetFloat("master vol", masterVolumePercent);
         PlayerPrefs.SetFloat("sfx vol", sfxVolumPercent);
         PlayerPrefs.SetFloat("music vol", musicVolumePercent);
+        PlayerPrefs.Save();
     }
 
     public void PlayMusic(AudioClip clip, float fadeDuration = 1) {
         //在1到0之间改变
         activeMusicSourceIndex = 1 - activeMusicSourceIndex;
         musicSources[activeMusicSourceIndex].clip = clip;
+        musicSources[activeMusicSourceIndex].volume = musicVolumePercent * masterVolumePercent;
         musicSources[activeMusicSourceIndex].Play();
 
         StartCoroutine(AnimateMusicCrossFade(fadeDuration));
@@ -110,8 +112,8 @@ public class AudioManager : MonoBehaviour {
 
         while (percent < 1) {
             percent += Time.deltaTime * 1 / duration;
-            musicSources[activeMusicSourceIndex].volume = Mathf.Lerp(0, musicVolumePercent * musicVolumePercent, percent);
-            musicSources[1 - activeMusicSourceIndex].volume = Mathf.Lerp(musicVolumePercent * musicVolumePercent, 0, percent);
+            musicSources[activeMusicSourceIndex].volume = Mathf.Lerp(0, musicVolumePercent * masterVolumePercent, percent);
+            musicSources[1 - activeMusicSourceIndex].volume = Mathf.Lerp(musicVolumePercent * masterVolumePercent, 0, percent);
             yield return null;
         }
     }
